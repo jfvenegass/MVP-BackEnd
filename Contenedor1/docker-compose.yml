@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  contenedor1:
+    build:
+      context: ./Torneos/api
+    container_name: contenedor1_api
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always
