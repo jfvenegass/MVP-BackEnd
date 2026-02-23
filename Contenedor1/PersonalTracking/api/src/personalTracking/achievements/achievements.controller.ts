@@ -7,6 +7,8 @@ import { CreateAchievementDto } from './dto/create-achievement.dto';
 import { UpdateAchievementDto } from './dto/update-achievement.dto';
 import { AchievementIdDto } from './dto/achievement-id.dto';
 import { Achievement } from './interfaces/achievement.interface';
+import { AchievementAllDto } from './dto/achievement-all.dto';
+import { post } from 'axios';
 
 @ApiTags('achievements')
 @Controller('achievements')
@@ -18,15 +20,14 @@ export class AchievementsController {
   @ApiResponse({ status: 201, type: Object })
   async create(
     @Body() dto: CreateAchievementDto,
-    @Body('accessToken') accessToken: string,
   ): Promise<Achievement> {
-    return this.service.create(dto, accessToken);
+    return this.service.create(dto);
   }
 
-  @Get()
+  @Post('getAll')
   @ApiOperation({ summary: 'Listar logros' })
-  async findAll(@Body('accessToken') accessToken: string) {
-    return this.service.findAll(accessToken);
+  async findAll(@Body() dto: AchievementAllDto) {
+    return this.service.findAll(dto);
   }
 
   @Post('get')

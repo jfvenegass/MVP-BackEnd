@@ -7,14 +7,17 @@ export class CreateAchievementDto {
   nombre: string;
 
   @ApiProperty()
+  accessToken: string;
+
+  @ApiProperty()
   descripcion: string;
 
   @ApiProperty()
-  xpRequerido: number;
+  puntos: number;
 
   @ApiProperty({ required: false })
   icono?: string;
 
   @ApiProperty({ default: true })
-  activo: boolean;
+  esSecreto: boolean;
 }

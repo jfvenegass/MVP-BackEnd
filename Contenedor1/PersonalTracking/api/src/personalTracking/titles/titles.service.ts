@@ -21,12 +21,17 @@ export class TitlesService {
   }
 
   async create(dto: CreateTitleDto, accessToken: string): Promise<Title> {
+    const record = {
+      nombre: dto.nombre,
+      descripcion: dto.descripcion,
+      rareza: dto.rareza
+    }
     try {
       const response = await axios.post(
         `${this.BASE_URL}/insert`,
         {
           tableName: 'Titulo',
-          records: [dto],
+          records: [record],
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },

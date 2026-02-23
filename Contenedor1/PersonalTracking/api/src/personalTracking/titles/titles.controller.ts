@@ -5,6 +5,7 @@ import { CreateTitleDto } from './dto/create-title.dto';
 import { UpdateTitleDto } from './dto/update-title.dto';
 import { TitleIdDto } from './dto/title-id.dto';
 import { Title } from './interfaces/title.interface';
+import { TitleAllDto } from './dto/find-all.dto';
 
 @ApiTags('titles')
 @ApiBearerAuth('access-token')
@@ -15,14 +16,14 @@ export class TitlesController {
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo título' })
   @ApiResponse({ status: 201, description: 'Título creado', type: CreateTitleDto })
-  async create(@Body() dto: CreateTitleDto, @Body('accessToken') accessToken: string): Promise<Title> {
-    return this.service.create(dto, accessToken);
+  async create(@Body() dto: CreateTitleDto): Promise<Title> {
+    return this.service.create(dto, dto.accessToken);
   }
 
-  @Get()
+  @Post('getAll')
   @ApiOperation({ summary: 'Listar todos los títulos' })
-  async findAll(@Body('accessToken') accessToken: string): Promise<Title[]> {
-    return this.service.findAll(accessToken);
+  async findAll(@Body() dto: TitleAllDto): Promise<Title[]> {
+    return this.service.findAll(dto.accessToken);
   }
 
   @Post('get')

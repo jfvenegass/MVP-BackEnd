@@ -7,6 +7,7 @@ import { CreateAchievementDto } from './dto/create-achievement.dto';
 import { UpdateAchievementDto } from './dto/update-achievement.dto';
 import { Achievement } from './interfaces/achievement.interface';
 import { RobleInsertResponse } from '../../common/interfaces/roble-response.interface';
+import { AchievementAllDto } from './dto/achievement-all.dto';
 
 @Injectable()
 export class AchievementsService {
@@ -20,14 +21,21 @@ export class AchievementsService {
 
   async create(
     dto: CreateAchievementDto,
-    accessToken: string,
   ): Promise<Achievement> {
+    const record = {
+      nombre: dto.nombre,
+      descripcion: dto.descripcion,
+      puntos: dto.puntos,
+      icono: dto.icono,
+      esSecreto: dto.esSecreto ?? false
+    };
+    const accessToken = dto.accessToken;
     try {
       const response = await axios.post<RobleInsertResponse<Achievement>>(
         `${this.BASE_URL}/insert`,
         {
           tableName: 'Logro',
-          records: [dto],
+          records: [record],
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -44,18 +52,18 @@ export class AchievementsService {
       );
     } catch (error: any) {
       throw new HttpException(
-        error.response?.data || 'Error al crear logro',
+        error.response?.data || 'Error al crear logro: '+error,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
-  async findAll(accessToken: string): Promise<Achievement[]> {
+  async findAll(dto: AchievementAllDto): Promise<Achievement[]> {
     try {
       const response = await axios.get<Achievement[]>(
         `${this.BASE_URL}/read`,
         {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${dto.accessToken}` },
           params: { tableName: 'Logro' },
         },
       );

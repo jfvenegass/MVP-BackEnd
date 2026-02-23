@@ -13,9 +13,6 @@ export class UpdateTitleDto {
   @ApiProperty({ required: false })
   rareza?: string;
 
-  @ApiProperty({ required: false })
-  iconoUrl?: string;
-
   @ApiProperty()
   accessToken: string;
 }

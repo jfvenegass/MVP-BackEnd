@@ -16,11 +16,11 @@ export class UpdateAchievementDto {
   descripcion?: string;
 
   @ApiProperty({ required: false })
-  xpRequerido?: number;
+  puntos?: number;
 
   @ApiProperty({ required: false })
   icono?: string;
 
   @ApiProperty({ required: false })
-  activo?: boolean;
+  esSecreto?: boolean;
 }
