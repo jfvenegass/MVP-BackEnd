@@ -55,8 +55,7 @@ export class ProfilesService {
       rachaActual: createDto.rachaActual ?? 0,
       rachaMaxima: createDto.rachaMaxima ?? 0,
       salvadoresRacha: createDto.salvadoresRacha ?? 0,
-    };
-
+    }
     try {
       const response = await axios.post<InsertResponse<Perfil>>(
         `${this.BASE_URL}/insert`,

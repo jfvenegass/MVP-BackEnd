@@ -8,6 +8,7 @@ import { StreaksModule } from './streaks/streaks.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { TitlesModule } from './titles/titles.module';
 import { AuthModule } from './auth/auth.module';
+import { GameSessionsModule } from './game-sessions/game-sessions.module';
 
 
 @Module({
@@ -17,7 +18,8 @@ import { AuthModule } from './auth/auth.module';
     ProfilesModule,
     StreaksModule,
     AchievementsModule,
-    TitlesModule
+    TitlesModule,
+    GameSessionsModule
   ],
   controllers: [PersonalTrackingController],
   providers: [PersonalTrackingService],
