@@ -160,4 +160,5 @@ export class ProfilesService {
       throw new HttpException('Error al conectar con ROBLE', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+  
 }

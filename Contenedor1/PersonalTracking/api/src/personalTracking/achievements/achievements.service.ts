@@ -8,6 +8,8 @@ import { UpdateAchievementDto } from './dto/update-achievement.dto';
 import { Achievement } from './interfaces/achievement.interface';
 import { RobleInsertResponse } from '../../common/interfaces/roble-response.interface';
 import { AchievementAllDto } from './dto/achievement-all.dto';
+import { UsuarioLogro } from './dto/usuario-logro.dto';
+import { error } from 'console';
 
 @Injectable()
 export class AchievementsService {
@@ -99,6 +101,28 @@ export class AchievementsService {
     }
   }
 
+  async findUser(
+    id: string,
+    accessToken: string,
+  ): Promise<Achievement | null> {
+    try {
+      const response = await axios.get<Achievement[]>(
+        `${this.BASE_URL}/read`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { tableName: 'LogroUsuario', usuarioId: id },
+        },
+      );
+      
+      return response.data.length > 0 ? response.data[0] : null;
+    } catch {      
+      throw new HttpException(
+        'Error al obtener logro',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   async update(
     dto: UpdateAchievementDto,
   ): Promise<Achievement> {
@@ -149,6 +173,51 @@ export class AchievementsService {
         'Error al eliminar logro',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  async agregarLogro(usuarioId: string,
+    logroId: string, 
+    accessToken: string): Promise<UsuarioLogro> {
+    try {
+      const response = await axios.post<any>(
+        `${this.BASE_URL}/insert`,
+        {
+          tableName: 'LogroUsuario',
+          records: [
+            {
+              usuarioId,
+              logroId,
+              desbloqueadoEn: new Date().toISOString(),
+            },
+          ],
+        },
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      return response.data.inserted[0];
+    } catch (error: any) {
+      throw new HttpException('Error al agregar logro', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async eliminarLogro(usuarioId: string, logroId: string, accessToken: string) {
+    try {
+      const response = await axios.request({
+        method: 'DELETE',
+        url: `${this.BASE_URL}/delete`,
+        headers: { Authorization: `Bearer ${accessToken}` },
+        data: {
+          tableName: 'LogroUsuario',
+          idColumn: 'usuarioId',
+          idValue: usuarioId,
+          additionalFilters: { logroId },
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      throw new HttpException('Error al eliminar logro', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
