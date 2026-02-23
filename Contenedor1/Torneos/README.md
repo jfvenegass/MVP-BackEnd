@@ -86,7 +86,7 @@ Si:
 •	ahora > fechaFin → FINALIZADO
 La validación del estado se ejecuta cuando el torneo es consultado o interactuado.
 ________________________________________
-⚙️ Reglas de Negocio
+Reglas de Negocio
 Creación
 •	Cualquier usuario autenticado puede crear torneos.
 •	Estado inicial: BORRADOR.
