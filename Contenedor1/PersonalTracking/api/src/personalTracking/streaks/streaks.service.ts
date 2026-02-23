@@ -6,7 +6,7 @@ export class StreaksService {
   private readonly BASE_URL = process.env.DB_SERVICE_URL;
 
   // ================================
-  // 🔥 AUMENTAR RACHA
+  // AUMENTAR RACHA
   // ================================
   async increaseStreak(usuarioId: string, accessToken: string) {
     try {
@@ -42,7 +42,7 @@ export class StreaksService {
   }
 
   // ================================
-  // ❌ RESETEAR RACHA
+  // RESETEAR RACHA
   // ================================
   async resetStreak(usuarioId: string, accessToken: string) {
     try {
@@ -64,7 +64,7 @@ export class StreaksService {
   }
 
   // ================================
-  // 🛡 USAR SALVADOR
+  //  USAR SALVADOR
   // ================================
   async useSaver(usuarioId: string, accessToken: string) {
     try {
@@ -92,7 +92,7 @@ export class StreaksService {
   }
 
   // ================================
-  // ➕ AUMENTAR SALVADORES
+  //  AUMENTAR SALVADORES
   // ================================
   async increaseSavers(
     usuarioId: string,
@@ -120,7 +120,7 @@ export class StreaksService {
   }
 
   // ================================
-  // 🔄 ACTUALIZAR RACHA MAXIMA
+  //  ACTUALIZAR RACHA MAXIMA
   // ================================
   async updateMaxStreak(usuarioId: string, accessToken: string) {
     try {
@@ -144,7 +144,7 @@ export class StreaksService {
   }
 
   // ================================
-  // 🔎 HELPERS PRIVADOS
+  //  HELPERS PRIVADOS
   // ================================
   private async getProfile(usuarioId: string, accessToken: string) {
     const response = await axios.post<any>(
