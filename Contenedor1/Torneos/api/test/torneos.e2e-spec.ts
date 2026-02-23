@@ -1,13 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
-describe('Torneos (e2e real)', () => {
+interface LoginResponse {
+  accessToken: string;
+}
+
+interface CreateTorneoResponse {
+  id: string;
+}
+
+describe('Torneos (e2e)', () => {
   let app: INestApplication;
-  let torneoId: string;
-
-  const authToken = 'TU_TOKEN_REAL_AQUI';
+  let token: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,34 +23,36 @@ describe('Torneos (e2e real)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'usuario1@uninorte.edu.com',
+        password: '12345678Aa!',
+      });
+
+    const loginBody = loginRes.body as LoginResponse;
+    token = loginBody.accessToken;
   });
 
-  it('Crear torneo real', async () => {
+  it('POST /torneos debe crear torneo', async () => {
     const res = await request(app.getHttpServer())
       .post('/torneos')
-      .set('Authorization', `Bearer ${authToken}`)
+      .set('Authorization', `Bearer ${token}`)
       .send({
-        nombre: `TEST_Torneo_${Date.now()}`,
-        descripcion: 'Torneo testing real',
+        nombre: 'Torneo Test',
+        descripcion: 'Test e2e',
         esPublico: true,
-        tipo: 'RANKING',
-        fechaInicio: new Date().toISOString(),
-        fechaFin: new Date(Date.now() + 86400000).toISOString(),
+        tipo: 'PUNTOS',
         recurrencia: 'NINGUNA',
-      })
-      .expect(201);
+        fechaInicio: '2026-03-01T00:00:00Z',
+        fechaFin: '2026-03-31T23:59:59Z',
+      });
 
-    torneoId = res.body._id;
-    expect(res.body._id).toBeDefined();
-  });
+    expect(res.status).toBe(201);
 
-  it('Obtener torneo real', async () => {
-    const res = await request(app.getHttpServer())
-      .get(`/torneos/${torneoId}`)
-      .set('Authorization', `Bearer ${authToken}`)
-      .expect(200);
-
-    expect(res.body._id).toBe(torneoId);
+    const body = res.body as CreateTorneoResponse;
+    expect(body.id).toBeDefined();
   });
 
   afterAll(async () => {

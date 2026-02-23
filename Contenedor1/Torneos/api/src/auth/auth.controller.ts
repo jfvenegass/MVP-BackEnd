@@ -6,6 +6,9 @@ import { SignupDto } from './dto/signup.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Req } from '@nestjs/common';
+import type { RobleRequest } from 'src/common/types/roble-request';
 
 @Controller('auth')
 export class AuthController {
@@ -46,9 +49,10 @@ export class AuthController {
     return this.service.resetPassword(dto);
   }
 
+  @ApiBearerAuth()
   @Post('logout')
-  logout(@Headers('authorization') auth: string) {
-    return this.service.logout(auth);
+  logout(@Req() req: RobleRequest) {
+    return this.service.logout(req.accessToken);
   }
 
   @Get('verify-token')
