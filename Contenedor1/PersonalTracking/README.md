@@ -23,6 +23,7 @@ All modules communicate with ROBLE using authenticated HTTP requests.
           ├── ProfilesModule
           ├── AchievementsModule
           ├── TitlesModule
+          ├── StreaksModule
           ├── GameSessionsModule
           └── GameStatsModule
 
@@ -153,6 +154,7 @@ Additional operations:
 - Assign title to profile 
 - Remove title from profile
 
+------------------------------------------------------------------------
 ## Titles Module
 
 CRUD operations for Titulo table.
@@ -186,6 +188,19 @@ Responsible for:
 -   Change league
 
 Initial ELO: 1000
+
+------------------------------------------------------------------------
+
+## Streaks Module
+
+Responsible for:
+
+-   Increase current streak
+-   Reset Streak
+-   Use streak saver
+-   Increase streak savers
+-   Update maximum streak
+
 
 ------------------------------------------------------------------------
 
