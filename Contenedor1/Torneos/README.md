@@ -234,7 +234,7 @@ Escenarios cubiertos:
 
 ## Swagger
 
-Disponible en: `http://localhost:3002/docs`
+Disponible en: `http://localhost:3000/api`
 
 Documenta DTOs, esquemas de request/response y autenticación Bearer.
 
@@ -243,7 +243,7 @@ Documenta DTOs, esquemas de request/response y autenticación Bearer.
 ## Despliegue
 
 - Dockerizado con multi-stage build
-- Puerto: **3002**
+- Puerto: **3000**
 
 **Variables de entorno requeridas:**
 ```env
