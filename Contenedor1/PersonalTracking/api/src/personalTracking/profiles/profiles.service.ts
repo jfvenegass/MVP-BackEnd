@@ -55,7 +55,6 @@ export class ProfilesService {
       rachaActual: createDto.rachaActual ?? 0,
       rachaMaxima: createDto.rachaMaxima ?? 0,
       salvadoresRacha: createDto.salvadoresRacha ?? 0,
-      tituloActivoId: createDto.tituloActivoId ?? null,
     };
 
     try {
