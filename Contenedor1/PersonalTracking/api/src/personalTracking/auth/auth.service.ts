@@ -8,6 +8,7 @@ import { LogoutDto } from './dto/logout.dto';
 import { SignupDto } from './dto/signup.dto';
 import { AuthResponse } from './interfaces/auth-response.interface';
 import { ProfilesService } from '../profiles/profiles.service';
+import { GameStatsService } from '../game-stats/game-stats.service';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +16,8 @@ export class AuthService {
   private readonly dbName: string;
 
   constructor(private readonly configService: ConfigService, 
-    private readonly ProfilesService: ProfilesService,) {
+    private readonly ProfilesService: ProfilesService,
+    private readonly GameStatsService: GameStatsService) {
     this.dbName = this.configService.get<string>('ROBLE_DB_NAME') ?? "";
   }
 
@@ -51,6 +53,7 @@ export class AuthService {
 
       if (!existingProfile) {
         await this.ProfilesService.createProfile({}, accessToken, authExternoId);
+        await this.GameStatsService.create(authExternoId,accessToken);
       }
     } catch (err) {
       console.error('Error verificando o creando perfil:', err);
