@@ -19,7 +19,8 @@ import { GameSessionsModule } from './game-sessions/game-sessions.module';
     StreaksModule,
     AchievementsModule,
     TitlesModule,
-    GameSessionsModule
+    GameSessionsModule,
+    StreaksModule
   ],
   controllers: [PersonalTrackingController],
   providers: [PersonalTrackingService],

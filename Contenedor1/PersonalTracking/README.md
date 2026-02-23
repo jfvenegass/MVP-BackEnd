@@ -86,20 +86,6 @@ The system uses the following entities:
 -   logroId (uuid, FK)
 -   desbloqueadoEn (datetime)
 
-## Insignia
-
--   id (uuid, PK)
--   nombre (string)
--   icono (string)
--   descripcion (string)
-
-## InsigniaUsuario
-
--   id (uuid, PK)
--   usuarioId (uuid, FK)
--   insigniaId (uuid, FK)
--   otorgadaEn (datetime)
-
 ## Titulo
 
 -   id (uuid, PK)
