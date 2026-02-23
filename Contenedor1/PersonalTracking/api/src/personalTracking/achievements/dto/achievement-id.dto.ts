@@ -1,10 +1,11 @@
 // src/personalTracking/achievements/dto/achievement-id.dto.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AchievementIdDto {
-  @ApiProperty({ description: 'ID del logro' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ description: 'Token de acceso del usuario' })
+  @ApiProperty()
   accessToken: string;
 }

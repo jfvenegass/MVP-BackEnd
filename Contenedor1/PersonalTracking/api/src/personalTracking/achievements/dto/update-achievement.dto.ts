@@ -1,22 +1,26 @@
 // src/personalTracking/achievements/dto/update-achievement.dto.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateAchievementDto {
-  @ApiProperty({ description: 'ID del logro a actualizar' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ description: 'Nombre del logro', required: false })
+  @ApiProperty()
+  accessToken: string;
+
+  @ApiProperty({ required: false })
   nombre?: string;
 
-  @ApiProperty({ description: 'Descripción del logro', required: false })
+  @ApiProperty({ required: false })
   descripcion?: string;
 
-  @ApiProperty({ description: 'Icono del logro', required: false })
+  @ApiProperty({ required: false })
+  xpRequerido?: number;
+
+  @ApiProperty({ required: false })
   icono?: string;
 
-  @ApiProperty({ description: 'Puntos del logro', required: false })
-  puntos?: number;
-
-  @ApiProperty({ description: 'Si el logro es secreto', required: false })
-  esSecreto?: boolean;
+  @ApiProperty({ required: false })
+  activo?: boolean;
 }

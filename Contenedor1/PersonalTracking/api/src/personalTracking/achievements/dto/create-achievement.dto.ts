@@ -1,19 +1,20 @@
 // src/personalTracking/achievements/dto/create-achievement.dto.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAchievementDto {
-  @ApiProperty({ description: 'Nombre del logro' })
+  @ApiProperty()
   nombre: string;
 
-  @ApiProperty({ description: 'Descripción del logro' })
+  @ApiProperty()
   descripcion: string;
 
-  @ApiProperty({ description: 'Icono del logro', required: false })
+  @ApiProperty()
+  xpRequerido: number;
+
+  @ApiProperty({ required: false })
   icono?: string;
 
-  @ApiProperty({ description: 'Puntos del logro' })
-  puntos: number;
-
-  @ApiProperty({ description: 'Si el logro es secreto', default: false })
-  esSecreto?: boolean;
+  @ApiProperty({ default: true })
+  activo: boolean;
 }
