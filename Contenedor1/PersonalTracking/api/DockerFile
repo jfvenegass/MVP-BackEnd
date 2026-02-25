@@ -1,0 +1,33 @@
+# 1. Imagen base
+FROM node:20-alpine AS build
+
+# 2. Directorio de trabajo
+WORKDIR /app
+
+# 3. Copiar package.json y package-lock.json
+COPY package*.json ./
+
+# 4. Instalar dependencias
+RUN npm ci
+
+# 5. Copiar el resto del proyecto
+COPY . .
+
+# 6. Compilar TypeScript a JavaScript
+RUN npm run build
+
+# ------------------------------------------------
+# Imagen final más ligera
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+# Copiar solo los node_modules y la carpeta dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+
+# Exponer puertos de los servidores
+EXPOSE 3000 3002
+
+# Comando para iniciar la app en producción
+CMD ["node", "dist/main.js"]
