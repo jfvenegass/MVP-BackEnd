@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  cerebro-api:
+    container_name: cerebro-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      PORT: ${PORT}
+      ROBLE_DBNAME: ${ROBLE_DBNAME}
+      ROBLE_AUTH_BASE: ${ROBLE_AUTH_BASE}
+      ROBLE_DB_BASE: ${ROBLE_DB_BASE}
+    restart: unless-stopped
