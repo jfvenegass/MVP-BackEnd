@@ -1,0 +1,33 @@
+export interface RobleInsertResponse<T> {
+  inserted: T[];
+  skipped: {
+    index: number;
+    reason: string;
+  }[];
+}
+
+export interface RobleVerifyTokenResponse {
+  sub: string; // userId
+  email: string;
+  dbName: string;
+  roleId: string;
+  role: string;
+  sessionId: string;
+  iat: number;
+  exp: number;
+}
+
+export interface RobleLoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  };
+}
+
+export interface RobleRefreshResponse {
+  accessToken: string;
+}
