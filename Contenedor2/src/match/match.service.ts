@@ -172,9 +172,21 @@ export class MatchService {
         throw new BadRequestException('El torneo no es de tipo PVP');
       }
       return torneo;
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof BadRequestException) throw err;
-      throw new NotFoundException('Torneo no encontrado en Contenedor1');
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      const code = err?.code;
+      const url = `${this.contenedor1Url}/torneos/${torneoId}`;
+      this.logger.error(
+        `verifyTorneoPvp failed: url=${url} code=${code} status=${status} data=${JSON.stringify(data)} message=${err?.message} name=${err?.name}`,
+      );
+      if (status === 404) {
+        throw new NotFoundException('Torneo no encontrado en Contenedor1');
+      }
+      throw new BadRequestException(
+        `Error verificando torneo en C1 (${code || err?.name || 'unknown'}): ${data?.message || err?.message || url}`,
+      );
     }
   }
 
@@ -202,10 +214,14 @@ export class MatchService {
       if (!isParticipant) {
         throw new ForbiddenException('No estas inscrito en este torneo');
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof ForbiddenException) throw err;
+      const data = err?.response?.data;
+      this.logger.error(
+        `verifyParticipante failed: ${JSON.stringify(data)} ${err?.message}`,
+      );
       throw new BadRequestException(
-        'No se pudo verificar la participacion en el torneo',
+        `No se pudo verificar participacion: ${data?.message || err?.message || 'unknown'}`,
       );
     }
   }

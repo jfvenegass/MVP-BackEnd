@@ -19,7 +19,7 @@ JUGADOR1_PASSWORD = "12345678Aa!"
 JUGADOR2_EMAIL = "usuarioprueba2@uninorte.edu.co"
 JUGADOR2_PASSWORD = "12345678Bb!"
 
-WEBHOOK_URL = "https://webhook.site/71ff6e40-3640-4509-9f1a-8288b07b44bc"
+WEBHOOK_URL = "https://webhook.site/30cb6f4f-43c0-40a2-b5ac-5ed42d56aeac"
 # ============================================================
 
 
