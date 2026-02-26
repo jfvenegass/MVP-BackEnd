@@ -66,11 +66,11 @@ export class WebhookService {
   }
 
   async getMisSuscripciones(usuarioId: string, token: string) {
-    const subs = await this.roble.read<WebhookSuscripcionRecord>(
+    const all = await this.roble.read<WebhookSuscripcionRecord>(
       token,
       this.TABLE,
-      { usuarioId },
     );
+    const subs = all.filter((s) => s.usuarioId === usuarioId);
 
     return subs.map((s) => ({
       ...s,
@@ -86,11 +86,11 @@ export class WebhookService {
   ) {
     for (const usuarioId of usuarioIds) {
       try {
-        const subs = await this.roble.read<WebhookSuscripcionRecord>(
+        const allSubs = await this.roble.read<WebhookSuscripcionRecord>(
           token,
           this.TABLE,
-          { usuarioId },
         );
+        const subs = allSubs.filter((s) => s.usuarioId === usuarioId);
 
         for (const sub of subs) {
           const eventosArr: string[] = JSON.parse(sub.eventos);

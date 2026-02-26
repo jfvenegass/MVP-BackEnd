@@ -14,6 +14,7 @@ import type { RobleRequest } from '../common/types/roble-request';
 import { getUserIdFromAccessToken } from '../common/utils/jwt.utils';
 import { MatchService } from './match.service';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { JoinMatchDto } from './dto/join-match.dto';
 import { MakeMoveDto } from './dto/make-move.dto';
 
 @ApiTags('PvP')
@@ -32,13 +33,17 @@ export class PvpController {
   @Post('match')
   async createMatch(@Req() req: RobleRequest, @Body() dto: CreateMatchDto) {
     const usuarioId = this.extractUserId(req.accessToken);
-    return this.matchService.createMatch(dto.torneoId, usuarioId, req.accessToken);
+    return this.matchService.createMatch(dto.torneoId, usuarioId, req.accessToken, dto.tokenC1);
   }
 
   @Post('match/:id/join')
-  async joinMatch(@Req() req: RobleRequest, @Param('id') id: string) {
+  async joinMatch(
+    @Req() req: RobleRequest,
+    @Param('id') id: string,
+    @Body() dto: JoinMatchDto,
+  ) {
     const usuarioId = this.extractUserId(req.accessToken);
-    return this.matchService.joinMatch(id, usuarioId, req.accessToken);
+    return this.matchService.joinMatch(id, usuarioId, req.accessToken, dto.tokenC1);
   }
 
   @Post('match/:id/move')

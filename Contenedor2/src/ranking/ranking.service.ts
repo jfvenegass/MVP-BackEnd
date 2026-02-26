@@ -16,10 +16,27 @@ export class RankingService {
 
   constructor(private readonly roble: RobleService) {}
 
-  async getOrCreateRanking(usuarioId: string, token: string): Promise<RankingRecord> {
-    const records = await this.roble.read<RankingRecord>(token, this.TABLE, { usuarioId });
+  private async getLatestRanking(
+    usuarioId: string,
+    token: string,
+  ): Promise<RankingRecord | null> {
+    const all = await this.roble.read<RankingRecord>(token, this.TABLE);
+    const userRecords = all
+      .filter((r) => r.usuarioId === usuarioId)
+      .sort(
+        (a, b) =>
+          new Date(b.fechaActualizacion).getTime() -
+          new Date(a.fechaActualizacion).getTime(),
+      );
+    return userRecords[0] ?? null;
+  }
 
-    if (records.length > 0) return records[0];
+  async getOrCreateRanking(
+    usuarioId: string,
+    token: string,
+  ): Promise<RankingRecord> {
+    const existing = await this.getLatestRanking(usuarioId, token);
+    if (existing) return existing;
 
     const result = await this.roble.insert<RankingRecord>(token, this.TABLE, [
       {
@@ -30,7 +47,6 @@ export class RankingService {
         fechaActualizacion: new Date().toISOString(),
       },
     ]);
-
     return result.inserted[0];
   }
 
@@ -38,24 +54,36 @@ export class RankingService {
     const ganadorRank = await this.getOrCreateRanking(ganadorId, token);
     const perdedorRank = await this.getOrCreateRanking(perdedorId, token);
 
-    const eloG = ganadorRank.elo;
-    const eloP = perdedorRank.elo;
+    const eloG = Number(ganadorRank.elo);
+    const eloP = Number(perdedorRank.elo);
 
     const expectedGanador = 1 / (1 + Math.pow(10, (eloP - eloG) / 400));
     const nuevoEloGanador = Math.round(eloG + 32 * (1 - expectedGanador));
-    const nuevoEloPerdedor = Math.round(eloP + 32 * (0 - (1 - expectedGanador)));
+    const nuevoEloPerdedor = Math.round(
+      eloP + 32 * (0 - (1 - expectedGanador)),
+    );
 
-    await this.roble.update(token, this.TABLE, '_id', ganadorRank._id!, {
-      elo: nuevoEloGanador,
-      victorias: ganadorRank.victorias + 1,
-      fechaActualizacion: new Date().toISOString(),
-    });
+    const now = new Date().toISOString();
 
-    await this.roble.update(token, this.TABLE, '_id', perdedorRank._id!, {
-      elo: nuevoEloPerdedor,
-      derrotas: perdedorRank.derrotas + 1,
-      fechaActualizacion: new Date().toISOString(),
-    });
+    await this.roble.insert<RankingRecord>(token, this.TABLE, [
+      {
+        usuarioId: ganadorId,
+        elo: nuevoEloGanador,
+        victorias: Number(ganadorRank.victorias) + 1,
+        derrotas: Number(ganadorRank.derrotas),
+        fechaActualizacion: now,
+      },
+    ]);
+
+    await this.roble.insert<RankingRecord>(token, this.TABLE, [
+      {
+        usuarioId: perdedorId,
+        elo: nuevoEloPerdedor,
+        victorias: Number(perdedorRank.victorias),
+        derrotas: Number(perdedorRank.derrotas) + 1,
+        fechaActualizacion: now,
+      },
+    ]);
 
     return {
       ganador: { usuarioId: ganadorId, nuevoElo: nuevoEloGanador },
@@ -65,10 +93,27 @@ export class RankingService {
 
   async getTop20(token: string): Promise<RankingRecord[]> {
     const all = await this.roble.read<RankingRecord>(token, this.TABLE);
-    return all.sort((a, b) => b.elo - a.elo).slice(0, 20);
+
+    const latestByUser = new Map<string, RankingRecord>();
+    for (const r of all) {
+      const existing = latestByUser.get(r.usuarioId);
+      if (
+        !existing ||
+        new Date(r.fechaActualizacion) > new Date(existing.fechaActualizacion)
+      ) {
+        latestByUser.set(r.usuarioId, r);
+      }
+    }
+
+    return [...latestByUser.values()]
+      .sort((a, b) => Number(b.elo) - Number(a.elo))
+      .slice(0, 20);
   }
 
-  async getMyRanking(usuarioId: string, token: string): Promise<RankingRecord> {
+  async getMyRanking(
+    usuarioId: string,
+    token: string,
+  ): Promise<RankingRecord> {
     return this.getOrCreateRanking(usuarioId, token);
   }
 }

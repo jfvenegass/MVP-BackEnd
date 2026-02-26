@@ -12,13 +12,19 @@ import { RobleService } from '../roble/roble.service';
 import { SudokuService } from '../sudoku/sudoku.service';
 import { WebhookService } from '../webhook/webhook.service';
 import { RankingService } from '../ranking/ranking.service';
+import { getUserIdFromAccessToken } from '../common/utils/jwt.utils';
+
+// Sentinel row values for non-move events in MovimientosPvP
+const ROW_JOIN = -1;
+const ROW_FORFEIT = -2;
+const ROW_FINISHED = -3;
 
 interface MatchRecord {
   _id?: string;
   torneoId: string;
   jugador1Id: string;
   jugador2Id: string | null;
-  estado: 'WAITING' | 'ACTIVE' | 'FINISHED' | 'FORFEIT';
+  estado: string;
   seed: number;
   solution: number[][];
   puntaje1: number;
@@ -40,6 +46,22 @@ interface MovimientoRecord {
   timestamp: string;
 }
 
+interface MatchState {
+  _id: string;
+  torneoId: string;
+  jugador1Id: string;
+  jugador2Id: string | null;
+  estado: 'WAITING' | 'ACTIVE' | 'FINISHED' | 'FORFEIT';
+  seed: number;
+  solution: number[][];
+  puntaje1: number;
+  puntaje2: number;
+  ganadorId: string | null;
+  fechaCreacion: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+}
+
 @Injectable()
 export class MatchService {
   private readonly logger = new Logger(MatchService.name);
@@ -53,19 +75,96 @@ export class MatchService {
     private readonly webhookService: WebhookService,
     private readonly rankingService: RankingService,
   ) {
-    this.contenedor1Url = this.config.getOrThrow<string>('CONTENEDOR1_BASE_URL');
+    this.contenedor1Url =
+      this.config.getOrThrow<string>('CONTENEDOR1_BASE_URL');
   }
 
-  private stripSolution(match: MatchRecord) {
-    const { solution, ...matchSinSolucion } = match;
-    return matchSinSolucion;
+  private stripSolution(state: MatchState) {
+    const { solution, ...rest } = state;
+    return rest;
   }
 
-  private async verifyTorneoPvp(torneoId: string, token: string) {
+  private async rebuildState(
+    matchId: string,
+    token: string,
+  ): Promise<MatchState> {
+    const matches = await this.roble.read<MatchRecord>(token, 'Matches', {
+      _id: matchId,
+    });
+    const base = matches[0];
+    if (!base) throw new NotFoundException('Match no encontrado');
+
+    let movimientos: MovimientoRecord[] = [];
+    try {
+      movimientos = await this.roble.read<MovimientoRecord>(
+        token,
+        'MovimientosPvP',
+        { matchId },
+      );
+    } catch {
+      // Table empty or doesn't have records yet
+    }
+
+    movimientos.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
+
+    const state: MatchState = {
+      _id: base._id!,
+      torneoId: base.torneoId,
+      jugador1Id: base.jugador1Id,
+      jugador2Id: null,
+      estado: 'WAITING',
+      seed: Number(base.seed),
+      solution: base.solution,
+      puntaje1: 0,
+      puntaje2: 0,
+      ganadorId: null,
+      fechaCreacion: base.fechaCreacion,
+      fechaInicio: null,
+      fechaFin: null,
+    };
+
+    for (const mov of movimientos) {
+      const row = Number(mov.row);
+      if (row === ROW_JOIN) {
+        state.jugador2Id = mov.usuarioId;
+        state.estado = 'ACTIVE';
+        state.fechaInicio = mov.timestamp;
+      } else if (row === ROW_FORFEIT) {
+        state.estado = 'FORFEIT';
+        // The forfeiter is mov.usuarioId; the winner is the other player
+        state.ganadorId =
+          mov.usuarioId === state.jugador1Id
+            ? state.jugador2Id
+            : state.jugador1Id;
+        state.fechaFin = mov.timestamp;
+      } else if (row === ROW_FINISHED) {
+        state.estado = 'FINISHED';
+        state.ganadorId =
+          state.puntaje1 > state.puntaje2
+            ? state.jugador1Id
+            : state.puntaje2 > state.puntaje1
+              ? state.jugador2Id
+              : mov.usuarioId;
+        state.fechaFin = mov.timestamp;
+      } else if (row >= 0) {
+        if (String(mov.esCorrecta) === 'true') {
+          if (mov.usuarioId === state.jugador1Id) state.puntaje1 += 1;
+          else state.puntaje2 += 1;
+        }
+      }
+    }
+
+    return state;
+  }
+
+  private async verifyTorneoPvp(torneoId: string, tokenC1: string) {
     try {
       const res = await firstValueFrom(
         this.http.get(`${this.contenedor1Url}/torneos/${torneoId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${tokenC1}` },
         }),
       );
       const torneo = res.data;
@@ -75,33 +174,50 @@ export class MatchService {
       return torneo;
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      throw new NotFoundException('Torneo no encontrado');
+      throw new NotFoundException('Torneo no encontrado en Contenedor1');
     }
   }
 
-  private async verifyParticipante(torneoId: string, usuarioId: string, token: string) {
+  private async verifyParticipante(torneoId: string, tokenC1: string) {
+    const c1UserId = getUserIdFromAccessToken(tokenC1);
+    if (!c1UserId) {
+      throw new BadRequestException(
+        'No se pudo obtener el userId del tokenC1',
+      );
+    }
     try {
       const res = await firstValueFrom(
-        this.http.get(`${this.contenedor1Url}/torneos/${torneoId}/participantes`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        this.http.get(
+          `${this.contenedor1Url}/torneos/${torneoId}/participantes`,
+          { headers: { Authorization: `Bearer ${tokenC1}` } },
+        ),
       );
       const participantes: any[] = res.data;
       const isParticipant = participantes.some(
-        (p) => p.usuarioId === usuarioId || p.userId === usuarioId || p._id === usuarioId,
+        (p) =>
+          p.usuarioId === c1UserId ||
+          p.userId === c1UserId ||
+          p._id === c1UserId,
       );
       if (!isParticipant) {
-        throw new ForbiddenException('No estás inscrito en este torneo');
+        throw new ForbiddenException('No estas inscrito en este torneo');
       }
     } catch (err) {
       if (err instanceof ForbiddenException) throw err;
-      throw new BadRequestException('No se pudo verificar la participación en el torneo');
+      throw new BadRequestException(
+        'No se pudo verificar la participacion en el torneo',
+      );
     }
   }
 
-  async createMatch(torneoId: string, usuarioId: string, token: string) {
-    await this.verifyTorneoPvp(torneoId, token);
-    await this.verifyParticipante(torneoId, usuarioId, token);
+  async createMatch(
+    torneoId: string,
+    usuarioId: string,
+    token: string,
+    tokenC1: string,
+  ) {
+    await this.verifyTorneoPvp(torneoId, tokenC1);
+    await this.verifyParticipante(torneoId, tokenC1);
 
     const seed = Math.floor(Math.random() * 1000000);
     const { solution } = this.sudokuService.generateBoard(seed);
@@ -123,41 +239,53 @@ export class MatchService {
       },
     ]);
 
-    return this.stripSolution(result.inserted[0]);
+    const created = result.inserted[0];
+    const state = await this.rebuildState(created._id!, token);
+    return this.stripSolution(state);
   }
 
-  async joinMatch(matchId: string, usuarioId: string, token: string) {
-    const matches = await this.roble.read<MatchRecord>(token, 'Matches', { _id: matchId });
-    const match = matches[0];
-    if (!match) throw new NotFoundException('Match no encontrado');
-    if (match.estado !== 'WAITING') throw new BadRequestException('El match no está en espera');
-    if (match.jugador1Id === usuarioId) {
+  async joinMatch(
+    matchId: string,
+    usuarioId: string,
+    token: string,
+    tokenC1: string,
+  ) {
+    const state = await this.rebuildState(matchId, token);
+    if (state.estado !== 'WAITING')
+      throw new BadRequestException('El match no esta en espera');
+    if (state.jugador1Id === usuarioId) {
       throw new BadRequestException('No puedes jugar contra ti mismo');
     }
 
-    await this.verifyParticipante(match.torneoId, usuarioId, token);
+    await this.verifyParticipante(state.torneoId, tokenC1);
 
-    await this.roble.update(token, 'Matches', '_id', matchId, {
-      jugador2Id: usuarioId,
-      estado: 'ACTIVE',
-      fechaInicio: new Date().toISOString(),
-    });
+    await this.roble.insert<MovimientoRecord>(token, 'MovimientosPvP', [
+      {
+        matchId,
+        usuarioId,
+        row: ROW_JOIN,
+        col: 0,
+        value: 0,
+        esCorrecta: false,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
 
     this.webhookService
       .emit(
         'match.started',
-        [match.jugador1Id, usuarioId],
+        [state.jugador1Id, usuarioId],
         {
           matchId,
-          seed: match.seed,
-          jugadores: [match.jugador1Id, usuarioId],
+          seed: state.seed,
+          jugadores: [state.jugador1Id, usuarioId],
         },
         token,
       )
       .catch((e) => this.logger.warn(`Webhook emit error: ${e.message}`));
 
-    const updated = await this.roble.read<MatchRecord>(token, 'Matches', { _id: matchId });
-    return this.stripSolution(updated[0]);
+    const updated = await this.rebuildState(matchId, token);
+    return this.stripSolution(updated);
   }
 
   async makeMove(
@@ -168,15 +296,19 @@ export class MatchService {
     value: number,
     token: string,
   ) {
-    const matches = await this.roble.read<MatchRecord>(token, 'Matches', { _id: matchId });
-    const match = matches[0];
-    if (!match) throw new NotFoundException('Match no encontrado');
-    if (match.estado !== 'ACTIVE') throw new BadRequestException('El match no está activo');
-    if (match.jugador1Id !== usuarioId && match.jugador2Id !== usuarioId) {
+    const state = await this.rebuildState(matchId, token);
+    if (state.estado !== 'ACTIVE')
+      throw new BadRequestException('El match no esta activo');
+    if (state.jugador1Id !== usuarioId && state.jugador2Id !== usuarioId) {
       throw new ForbiddenException('No eres jugador de este match');
     }
 
-    const esCorrecta = this.sudokuService.validateMove(match.solution, row, col, value);
+    const esCorrecta = this.sudokuService.validateMove(
+      state.solution,
+      row,
+      col,
+      value,
+    );
 
     await this.roble.insert<MovimientoRecord>(token, 'MovimientosPvP', [
       {
@@ -190,22 +322,12 @@ export class MatchService {
       },
     ]);
 
-    const isJugador1 = match.jugador1Id === usuarioId;
-    let puntaje1 = match.puntaje1;
-    let puntaje2 = match.puntaje2;
+    const isJugador1 = state.jugador1Id === usuarioId;
+    const puntaje1 = state.puntaje1 + (esCorrecta && isJugador1 ? 1 : 0);
+    const puntaje2 = state.puntaje2 + (esCorrecta && !isJugador1 ? 1 : 0);
 
-    if (esCorrecta) {
-      if (isJugador1) {
-        puntaje1 += 1;
-        await this.roble.update(token, 'Matches', '_id', matchId, { puntaje1 });
-      } else {
-        puntaje2 += 1;
-        await this.roble.update(token, 'Matches', '_id', matchId, { puntaje2 });
-      }
-    }
-
-    const jugador2Id = match.jugador2Id!;
-    const oponenteId = isJugador1 ? jugador2Id : match.jugador1Id;
+    const jugador2Id = state.jugador2Id!;
+    const oponenteId = isJugador1 ? jugador2Id : state.jugador1Id;
     const puntajeOponente = isJugador1 ? puntaje1 : puntaje2;
 
     this.webhookService
@@ -217,27 +339,48 @@ export class MatchService {
       )
       .catch((e) => this.logger.warn(`Webhook emit error: ${e.message}`));
 
-    const { board } = this.sudokuService.generateBoard(match.seed);
+    const { board } = this.sudokuService.generateBoard(state.seed);
     const celdasVacias = board.flat().filter((c) => c === 0).length;
 
     if (puntaje1 + puntaje2 >= celdasVacias) {
-      await this.roble.update(token, 'Matches', '_id', matchId, {
-        estado: 'FINISHED',
-        ganadorId: usuarioId,
-        fechaFin: new Date().toISOString(),
-      });
+      const ganadorId =
+        puntaje1 > puntaje2
+          ? state.jugador1Id
+          : puntaje2 > puntaje1
+            ? jugador2Id
+            : usuarioId;
 
-      const perdedorId = oponenteId;
-      const eloResult = await this.rankingService.updateElo(usuarioId, perdedorId, token);
+      await this.roble.insert<MovimientoRecord>(token, 'MovimientosPvP', [
+        {
+          matchId,
+          usuarioId: ganadorId,
+          row: ROW_FINISHED,
+          col: 0,
+          value: 0,
+          esCorrecta: false,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+
+      const perdedorId =
+        ganadorId === state.jugador1Id ? jugador2Id : state.jugador1Id;
+      const eloResult = await this.rankingService.updateElo(
+        ganadorId,
+        perdedorId,
+        token,
+      );
 
       this.webhookService
         .emit(
           'match.finished',
-          [match.jugador1Id, jugador2Id],
+          [state.jugador1Id, jugador2Id],
           {
             matchId,
-            ganadorId: usuarioId,
-            puntajeFinal: { [match.jugador1Id]: puntaje1, [jugador2Id]: puntaje2 },
+            ganadorId,
+            puntajeFinal: {
+              [state.jugador1Id]: puntaje1,
+              [jugador2Id]: puntaje2,
+            },
             nuevoElo: {
               [eloResult.ganador.usuarioId]: eloResult.ganador.nuevoElo,
               [eloResult.perdedor.usuarioId]: eloResult.perdedor.nuevoElo,
@@ -250,7 +393,7 @@ export class MatchService {
       return {
         esCorrecta,
         matchTerminado: true,
-        ganadorId: usuarioId,
+        ganadorId,
         puntaje1,
         puntaje2,
       };
@@ -260,40 +403,44 @@ export class MatchService {
   }
 
   async getMatch(matchId: string, token: string) {
-    const matches = await this.roble.read<MatchRecord>(token, 'Matches', { _id: matchId });
-    const match = matches[0];
-    if (!match) throw new NotFoundException('Match no encontrado');
-    return this.stripSolution(match);
+    const state = await this.rebuildState(matchId, token);
+    return this.stripSolution(state);
   }
 
   async forfeit(matchId: string, usuarioId: string, token: string) {
-    const matches = await this.roble.read<MatchRecord>(token, 'Matches', { _id: matchId });
-    const match = matches[0];
-    if (!match) throw new NotFoundException('Match no encontrado');
-    if (match.estado !== 'ACTIVE') throw new BadRequestException('El match no está activo');
-    if (match.jugador1Id !== usuarioId && match.jugador2Id !== usuarioId) {
+    const state = await this.rebuildState(matchId, token);
+    if (state.estado !== 'ACTIVE')
+      throw new BadRequestException('El match no esta activo');
+    if (state.jugador1Id !== usuarioId && state.jugador2Id !== usuarioId) {
       throw new ForbiddenException('No eres jugador de este match');
     }
 
-    const j2Id = match.jugador2Id!;
-    const oponenteId = match.jugador1Id === usuarioId ? j2Id : match.jugador1Id;
+    const j2Id = state.jugador2Id!;
+    const oponenteId =
+      state.jugador1Id === usuarioId ? j2Id : state.jugador1Id;
 
-    await this.roble.update(token, 'Matches', '_id', matchId, {
-      estado: 'FORFEIT',
-      ganadorId: oponenteId,
-      fechaFin: new Date().toISOString(),
-    });
+    await this.roble.insert<MovimientoRecord>(token, 'MovimientosPvP', [
+      {
+        matchId,
+        usuarioId,
+        row: ROW_FORFEIT,
+        col: 0,
+        value: 0,
+        esCorrecta: false,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
 
     await this.rankingService.updateElo(oponenteId, usuarioId, token);
 
     this.webhookService
       .emit(
         'match.forfeit',
-        [match.jugador1Id, j2Id],
+        [state.jugador1Id, j2Id],
         {
           matchId,
           ganadorId: oponenteId,
-          razon: `El jugador ${usuarioId} abandonó la partida`,
+          razon: `El jugador ${usuarioId} abandono la partida`,
         },
         token,
       )

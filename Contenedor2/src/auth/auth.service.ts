@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +17,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly baseUrl: string;
 
   constructor(
@@ -28,68 +29,128 @@ export class AuthService {
     this.baseUrl = `${base}/${db}`;
   }
 
-  async login(dto: LoginDto): Promise<RobleLoginResponse> {
-    const response = await firstValueFrom(
-      this.http.post<RobleLoginResponse>(`${this.baseUrl}/login`, dto),
+  private handleRobleError(err: any): never {
+    const response = err?.response;
+    if (response) {
+      const status = response.status || HttpStatus.BAD_REQUEST;
+      const data = response.data || { message: response.statusText };
+      this.logger.warn(`ROBLE error ${status}: ${JSON.stringify(data)}`);
+      throw new HttpException(data, status);
+    }
+    this.logger.error(`ROBLE communication error: ${err?.message || err}`);
+    throw new HttpException(
+      { message: err?.message || 'Error al comunicarse con ROBLE' },
+      HttpStatus.BAD_GATEWAY,
     );
-    return response.data;
+  }
+
+  async login(dto: LoginDto): Promise<RobleLoginResponse> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RobleLoginResponse>(`${this.baseUrl}/login`, dto),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async refresh(dto: RefreshDto): Promise<RobleRefreshResponse> {
-    const response = await firstValueFrom(
-      this.http.post<RobleRefreshResponse>(
-        `${this.baseUrl}/refresh-token`,
-        dto,
-      ),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RobleRefreshResponse>(
+          `${this.baseUrl}/refresh-token`,
+          dto,
+        ),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async signup(dto: SignupDto): Promise<RobleGenericSuccess> {
-    const response = await firstValueFrom(
-      this.http.post<RobleGenericSuccess>(`${this.baseUrl}/signup`, dto),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RobleGenericSuccess>(`${this.baseUrl}/signup`, dto),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async signupDirect(dto: SignupDto): Promise<RobleGenericSuccess> {
-    const response = await firstValueFrom(
-      this.http.post<RobleGenericSuccess>(`${this.baseUrl}/signup-direct`, dto),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RobleGenericSuccess>(
+          `${this.baseUrl}/signup-direct`,
+          dto,
+        ),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<RobleGenericSuccess> {
-    const response = await firstValueFrom(
-      this.http.post<RobleGenericSuccess>(`${this.baseUrl}/verify-email`, dto),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RobleGenericSuccess>(
+          `${this.baseUrl}/verify-email`,
+          dto,
+        ),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`${this.baseUrl}/forgot-password`, dto),
-    );
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.baseUrl}/forgot-password`, dto),
+      );
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    await firstValueFrom(this.http.post(`${this.baseUrl}/reset-password`, dto));
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.baseUrl}/reset-password`, dto),
+      );
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
-  async logout(authHeader: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`${this.baseUrl}/logout`, null, {
-        headers: { Authorization: authHeader },
-      }),
-    );
+  async logout(accessToken: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.baseUrl}/logout`, null, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      );
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 
   async verifyToken(authHeader: string): Promise<RobleVerifyTokenResponse> {
-    const response = await firstValueFrom(
-      this.http.get<RobleVerifyTokenResponse>(`${this.baseUrl}/verify-token`, {
-        headers: { Authorization: authHeader },
-      }),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.http.get<RobleVerifyTokenResponse>(
+          `${this.baseUrl}/verify-token`,
+          { headers: { Authorization: authHeader } },
+        ),
+      );
+      return response.data;
+    } catch (err) {
+      this.handleRobleError(err);
+    }
   }
 }
