@@ -7,5 +7,5 @@ export interface Perfil {
   rachaActual: number;
   rachaMaxima: number;
   salvadoresRacha: number;
-  tituloActivoId?: string | null;
+  tituloActivo?: string | null;
 }

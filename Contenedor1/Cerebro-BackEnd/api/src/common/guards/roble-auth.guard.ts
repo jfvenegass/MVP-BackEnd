@@ -41,9 +41,13 @@ export class RobleAuthGuard implements CanActivate {
     try {
       const tokenInfo = await this.robleService.verifyToken(token);
 
+      if (!tokenInfo.valid || !tokenInfo.user?.sub) {
+        throw new UnauthorizedException('Token payload inválido');
+      }
+
       const typedReq = req as RobleRequest;
       typedReq.accessToken = token;
-      typedReq.robleUser = tokenInfo;
+      typedReq.robleUser = tokenInfo.user;
 
       return true;
     } catch {

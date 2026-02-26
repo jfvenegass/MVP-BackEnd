@@ -21,5 +21,5 @@ export class PerfilDto {
   salvadoresRacha!: number;
 
   @ApiProperty({ nullable: true })
-  tituloActivoId?: string;
+  tituloActivo?: string;
 }

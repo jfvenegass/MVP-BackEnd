@@ -6,15 +6,16 @@ export interface RobleInsertResponse<T> {
   }[];
 }
 
-export interface RobleVerifyTokenResponse {
-  sub: string; // userId
+export interface RobleUserPayload {
+  sub: string;
   email: string;
-  dbName: string;
-  roleId: string;
-  role: string;
-  sessionId: string;
-  iat: number;
-  exp: number;
+  role?: string;
+  dbName?: string;
+}
+
+export interface RobleVerifyTokenResponse {
+  valid: boolean;
+  user: RobleUserPayload;
 }
 
 export interface RobleLoginResponse {

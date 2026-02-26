@@ -6,7 +6,7 @@ export interface PerfilRow {
   rachaActual: number;
   rachaMaxima: number;
   salvadoresRacha: number;
-  tituloActivoId: string | null;
+  tituloActivo?: string | null;
 }
 
 export interface JuegoRow {

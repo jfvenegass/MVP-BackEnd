@@ -34,7 +34,7 @@ export class RobleService {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       );
-
+      console.log('Respuesta verifyToken:', response.data);
       return response.data;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');

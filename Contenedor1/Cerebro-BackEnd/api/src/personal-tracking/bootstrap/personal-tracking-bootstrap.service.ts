@@ -40,7 +40,7 @@ export class PersonalTrackingBootstrapService {
           rachaActual: 0,
           rachaMaxima: 0,
           salvadoresRacha: 0,
-          tituloActivoId: null,
+          tituloActivo: null,
         },
       ],
     );

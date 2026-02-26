@@ -20,5 +20,5 @@ export class ProfileResponseDto {
   salvadoresRacha!: number;
 
   @ApiProperty({ example: 'titulo-uuid' })
-  tituloActivoId!: string;
+  tituloActivo!: string;
 }
